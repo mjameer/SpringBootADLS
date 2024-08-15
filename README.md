@@ -1,9 +1,9 @@
 This code setup will aid in uploading and downloading files via Azure Blob Storage. 
 
 ### Java 
-- App runs using Java version 21, but commit history has pom for Java version 8 & 17
+- App runs using Java version 21, but the commit history has pom.xml for Java versions 8 & 17
 
-### changes required
+### Changes required
 - Update application.properties with your ADLS information.
 
 ### File upload 
