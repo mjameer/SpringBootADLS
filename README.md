@@ -1,4 +1,4 @@
-This code setup will aid in ADLS file upload and file download. 
+This code setup will aid in uploading and downloading files via Azure Blob Storage. 
 
 ### changes required
 - Update application.properties with your ADLS information.
