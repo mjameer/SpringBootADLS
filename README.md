@@ -2,6 +2,7 @@ This code setup will aid in uploading and downloading files via Azure Blob Stora
 
 ### Java 
 - App runs using Java version 21, but the commit history has pom.xml for Java versions 8 & 17
+- Has code to upload, download, delete files, download full folders, calculate folder size and to get all file names in a folder. 
 
 ### Changes required
 - Update application.properties with your ADLS information.
