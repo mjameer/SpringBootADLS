@@ -3,25 +3,31 @@ package org.example.service;
 import com.azure.core.util.BinaryData;
 import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobContainerClient;
+import com.azure.storage.blob.models.BlobItem;
+import com.azure.storage.blob.models.ListBlobsOptions;
 import com.azure.storage.blob.sas.BlobSasPermission;
 import com.azure.storage.blob.sas.BlobServiceSasSignatureValues;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StreamUtils;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.BufferedInputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 @Slf4j
 @Service
 public class FileUtils {
 
     public static final String filePath = "/FilePath/";
+    private static final String SLASH_SYMBOL = "/";
 
     @Autowired
     private BlobContainerClient azureStorageClient;
@@ -64,4 +70,85 @@ public class FileUtils {
         }
         return new InputStreamResource(inputStream);
     }
+
+
+    /**
+     * Downloads all files from Azure Folder Storage
+     */
+    public void downloadFolderFromAzureStorage(String folderPath, String destinationPath)  {
+        log.info("Downloading all files from folder " + folderPath);
+        String[] blobNames;
+        for (BlobItem blobItem : azureStorageClient.listBlobs(new ListBlobsOptions().setPrefix(folderPath), null)) {
+            if (Optional.ofNullable(blobItem.getName()).isPresent()) {
+                blobNames = blobItem.getName().split(SLASH_SYMBOL);
+                azureStorageClient.getBlobClient(blobItem.getName()).downloadToFile(
+                        destinationPath + File.separator + blobNames[blobNames.length - 1]);
+            }
+        }
+        log.info("Completed Downloading all files from folder " + folderPath);
+    }
+
+    /**
+     * Deletes File from Azure Storage
+     */
+    public void deleteFileFromAzureStorage(String filePath, String fileName){
+        log.info("Deleting file named: " + fileName + " from " + filePath);
+        azureStorageClient.getBlobClient(filePath + File.separator + fileName).getBlockBlobClient().deleteIfExists();
+        log.info("File downloaded successfully from Azure File Storage");
+    }
+
+    /**
+     * Calculates Folder size in Azure Storage
+     */
+    public long calculateFolderSizeInAzureStorage(String folderPath){
+        log.info("Calculating folder size of Azure Storage folder : " + folderPath);
+        long folderSize = 0;
+        for (BlobItem blobItem : azureStorageClient.listBlobs(new ListBlobsOptions().setPrefix(folderPath), null)) {
+            if (Optional.ofNullable(blobItem.getName()).isPresent()) {
+                folderSize += azureStorageClient.getBlobClient(blobItem.getName()).getProperties().getBlobSize();
+            }
+        }
+        return folderSize;
+    }
+
+    /**
+     * Gets the file names in a folder in Azure Storage
+     */
+    public List<String> getFileNamesInAzureStorage(String folderPath){
+        List<String> fileNames = new ArrayList<>();
+        String[] blobNames;
+        for (BlobItem blobItem : azureStorageClient.listBlobs(new ListBlobsOptions().setPrefix(folderPath), null)) {
+            if (Optional.ofNullable(blobItem.getName()).isPresent()) {
+                blobNames = blobItem.getName().split(SLASH_SYMBOL);
+                fileNames.add(blobNames[blobNames.length - 1]);
+            }
+        }
+        return fileNames;
+    }
+
+    /**
+     * Zipped all the files iteratively for the given folder path.
+     */
+    public static void zipFile(File fileToZip, String fileName, ZipOutputStream zipOut) throws IOException {
+        if (fileToZip.isDirectory()) {
+            if (fileName.endsWith(SLASH_SYMBOL)) {
+                zipOut.putNextEntry(new ZipEntry(fileName));
+                zipOut.closeEntry();
+            } else {
+                zipOut.putNextEntry(new ZipEntry(fileName + SLASH_SYMBOL));
+                zipOut.closeEntry();
+            }
+            File[] children = fileToZip.listFiles();
+            for (File childFile : children) {
+                zipFile(childFile, fileName + SLASH_SYMBOL + childFile.getName(), zipOut);
+            }
+            return;
+        }
+        FileInputStream fis = new FileInputStream(fileToZip);
+        ZipEntry zipEntry = new ZipEntry(fileName);
+        zipOut.putNextEntry(zipEntry);
+        StreamUtils.copy(fis, zipOut);
+        fis.close();
+    }
+
 }

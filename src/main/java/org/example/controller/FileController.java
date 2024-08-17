@@ -26,6 +26,7 @@ public class FileController {
     @GetMapping(value = "/download/{fileName}")
     public ResponseEntity<InputStreamResource> downloadFile(
             @PathVariable("fileName") String fileName) {
+        log.info("Downloading file " + fileName);
         InputStreamResource file = fileUtils.downloadFile(fileName);
 
         // Set the appropriate content type and header for the file download
